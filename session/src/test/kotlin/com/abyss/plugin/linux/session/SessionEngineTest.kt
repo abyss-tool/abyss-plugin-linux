@@ -193,8 +193,8 @@ class RefCountEngineTest {
         assertEquals(1, entry.refCount)
         e.retain("s1", RuntimeDomain.PROOT_USERLAND, setOf(Feature.EXEC))
         assertEquals(2, e.entryOf("s1")!!.refCount)
-        e.release("s1")
-        assertEquals(false, e.release("s1")) // 第二次释放才归零（返回 true 的是归零那次）
+        assertEquals(false, e.release("s1")) // 2→1 未归零返回 false
+        assertEquals(true, e.release("s1")) // 1→0 归零返回 true（触发延迟回收计时）
         assertEquals(0, e.entryOf("s1")!!.refCount)
     }
 
