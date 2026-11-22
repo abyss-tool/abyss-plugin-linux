@@ -9,7 +9,6 @@ import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 /** RuntimeSession 状态机（ARC-101 AC-002：10 状态 ≥14 条迁移单测）。 */
 class SessionStateMachineTest {
@@ -141,7 +140,7 @@ class WorkspaceGuardTest {
         val guard = WorkspaceGuard(tmp.newFolder("workspace"))
         val f = guard.resolve("build-1000/src/main.kt")
         assertTrue(f.path.contains("build-1000"))
-        assertTrue(f.path.endsWith("src/main.kt") || f.path.endsWith("src${'/'}main.kt".replace("${'/'}", File.separatorChar)))
+        assertTrue(f.path.endsWith("src/main.kt"))
     }
 
     @Test

@@ -57,7 +57,7 @@ class LinuxCommandsTest {
     @Test
     fun `非法 token 就地拒绝（零 shell 执行）`() {
         listOf(
-            "a;b", "a|b", "a&b", "a\$b", "a\`b\`", "a b", "", "a\nb",
+            "a;b", "a|b", "a&b", "a\$b", "a`b`", "a b", "", "a\nb",
         ).forEach { bad ->
             try {
                 LinuxCommands.requireSafeToken(bad)
