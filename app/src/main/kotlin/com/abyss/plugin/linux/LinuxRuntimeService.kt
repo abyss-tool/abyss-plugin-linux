@@ -3,7 +3,7 @@ package com.abyss.plugin.linux
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import com.abyss.plugin.linux.runtime.HostContractActions
+import com.abyss.plugin.linux.runtime.api.HostContractActions
 import com.abyss.plugin.linux.runtime.LinuxRuntimeBinder
 
 /**
