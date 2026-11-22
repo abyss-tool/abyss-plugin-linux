@@ -121,7 +121,8 @@ object DomainProbe {
         return when {
             output.isBlank() -> ProbeOutcome.DENIED
             enforcing && manufacturer.isBlank() -> ProbeOutcome.DENIED
-            tracerPid == null || tracerPid == "0" -> ProbeOutcome.OK
+            // 显式 TracerPid=0 = 无 tracer（干净环境）；缺失 = 语义不明 → 拒绝不猜测
+            tracerPid == "0" -> ProbeOutcome.OK
             else -> ProbeOutcome.DENIED
         }
     }
