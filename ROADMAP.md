@@ -3,7 +3,7 @@
 > 对齐主仓规格 `PLAN-100`（M0–M4 里程碑）与 `ROADMAP` 演进纪律：
 > 先 PRoot 域、再跨插件能力绑定、再 QEMU 域、最后资产差量收口。
 
-- [ ] v0.2 PRoot 域（M1 · T-012~T-018）：`:runtime-api` AIDL 落地 `LinuxRuntimeService` / `ILinuxRuntime` 实现、`:session` RuntimeSession 状态机与引用计数、`:domain-proot` 引擎嵌入与 rootfs 解包、`:probe` ptrace / arch / 存储 / libc 探测与降级决策、`:asset` 分卷下载 / 双层校验 / 断点续传 / 配额 LRU、`:shizuku` 唯一授权与 shell 上下文
+- [ ] v0.2 PRoot 域（M1 · T-012~T-018）：`:session` 状态机/引用计数/工作区断言 ✅、`:asset` 契约/账本/配额/续传 ✅、`:probe` 降级决策树 ✅、`:shizuku` 授权状态机+指令编排 ✅、`:domain-proot` argv 组装 ✅、`:domain-qemu` 档位/argv ✅（纯 JVM 面）；待接线：引擎原生库 / Android 侧 Binder / 下载实现
 - [ ] v0.3 跨插件能力绑定（M1 出口）：宿主 `PluginBroker` 握手打通、`SessionGrant` 签发 / 校验 / 撤销、受限 `ILinuxSession` 代理经宿主中介下发、E2E-01（`echo ok` / `apk --version`）跑通
 - [ ] v0.4 QEMU 域（M3 · T-029~T-035）：TCG arm64 引擎集成与档位、qcow2 镜像资产、9p/virtiofs 工作区挂载、VNC 回环 + 随机口令、快照与 `ResourceLimits` 打通、切域确认弹层数据
 - [ ] v0.5 资产差量与收口（M4）：vcdiff 差量更新（可选）、配额 LRU 与清理审计收口、性能基线实测达标、`abyss-plugin-virtual-machine` 能力承接公告的最终验证

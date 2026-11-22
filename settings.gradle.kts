@@ -40,7 +40,6 @@ rootProject.name = "abyss-plugin-linux"
 // :app             插件 APK：LinuxRuntimeService / 前台服务 / 权限声明 / AIDL 编译
 // :runtime-api     纯 JVM 契约：ILinuxRuntime/ILinuxSession 数据模型 + 能力描述
 //                  JSON + 统一错误码表（宿主与消费方 compileOnly 的单一事实源）
-// M1 起逐里程碑加入（见 ROADMAP.md / ARC-100 §4）：
 // :session         纯 JVM：RuntimeSession 状态机 / 引用计数 / 限额 / 工作区断言
 // :asset           纯 JVM + Android 下载实现：abyss-asset-v1 清单 / 分卷校验 / 配额
 // :probe           纯 JVM + JNI：ptrace / memlock / arch / 存储探测与降级决策
@@ -49,3 +48,9 @@ rootProject.name = "abyss-plugin-linux"
 // :domain-qemu     Android 库 + 原生库：QEMU TCG / qcow2 / VNC 回环 / 快照 / 9p 挂载
 include(":app")
 include(":runtime-api")
+include(":session")
+include(":asset")
+include(":probe")
+include(":shizuku")
+include(":domain-proot")
+include(":domain-qemu")
