@@ -32,8 +32,8 @@ class QemuDomainTest {
 
     @Test
     fun `HIGH 档 4GB 空闲门槛`() {
-        // 5GB 可用：60% 预算 = 3GB > 2048 过，但空闲 < 4GB → HIGH 拒
-        assertTrue(QemuDomain.validateTier(QemuDomain.Tier.HIGH, 5000)!!.contains("HIGH"))
+        // 4000MB 可用：60% 预算 = 2400MB > 2048 过，但空闲 < 4096 → HIGH 拒
+        assertTrue(QemuDomain.validateTier(QemuDomain.Tier.HIGH, 4000)!!.contains("HIGH"))
         assertNull(QemuDomain.validateTier(QemuDomain.Tier.HIGH, 4096))
     }
 
