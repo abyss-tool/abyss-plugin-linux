@@ -10,7 +10,7 @@ import org.junit.Test
 class QemuDomainTest {
 
     @Test
-    fun `三档位常量（LOW 1×512 / MID 2×1024 / HIGH 4×2048）`() {
+    fun `三档位常量（LOW 1×512、MID 2×1024、HIGH 4×2048）`() {
         assertEquals(1, QemuDomain.Tier.LOW.vcpu)
         assertEquals(512, QemuDomain.Tier.LOW.memoryMb)
         assertEquals(2, QemuDomain.Tier.MID.vcpu)
@@ -45,7 +45,7 @@ class QemuDomainTest {
     }
 
     @Test
-    fun `快照元数据（含镜像 id / 内存 / 时间 / sha256）`() {
+    fun `快照元数据（含镜像 id、内存、时间、sha256）`() {
         QemuDomain.SnapshotMeta("alpine-vm", 1024, 1L, "a".repeat(64))
         try {
             QemuDomain.SnapshotMeta("", 1024, 1L, "a".repeat(64))

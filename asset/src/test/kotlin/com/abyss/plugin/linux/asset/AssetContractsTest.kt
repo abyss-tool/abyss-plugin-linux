@@ -170,7 +170,7 @@ class QuotaPolicyTest {
     }
 
     @Test
-    fun `清理写审计（id / 版本 / 释放量 / 原因）`() {
+    fun `清理写审计（id、版本、释放量、原因）`() {
         val ledger = AssetLedger(
             entries = listOf(
                 entry("rootfs-old", 5L * 1024 * 1024 * 1024, lastRef = 1),

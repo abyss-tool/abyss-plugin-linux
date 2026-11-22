@@ -84,7 +84,7 @@ class LinuxCommandsTest {
     }
 
     @Test
-    fun `冒烟与 ldd 模板（E2E-01 / C-1 门禁）`() {
+    fun `冒烟与 ldd 模板（E2E-01 与 C-1 门禁）`() {
         assertEquals(listOf(listOf("echo", "ok"), listOf("apk", "--version")), LinuxCommands.smokeTestArgv())
         assertEquals(
             listOf("ldd", "/toolchains/aapt2"),
