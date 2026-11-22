@@ -36,6 +36,11 @@ jobs:
           chmod +x tools/validate_assets.py
           python3 tools/validate_assets.py
 
+      - name: Scan runtime asset discipline (ENG-100 / PLAN-101 §1③)
+        run: |
+          chmod +x tools/scan_runtime.py
+          python3 tools/scan_runtime.py
+
   # ── 构建 + 纯 JVM 单测（本仓不做本地编译：全部编译验证走 GitHub
   # Actions，ubuntu-latest 自带 Android SDK cmdline-tools，Gradle 8.14
   # wrapper 自动拉取发行版 —— 与主仓 Abyss-Tools 同源矩阵）。
