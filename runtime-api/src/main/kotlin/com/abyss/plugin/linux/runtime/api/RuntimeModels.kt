@@ -19,7 +19,8 @@ data class Diagnostic(
     val hint: String = "",
     /** 平台限制类附已知 ROM 清单与人话建议（E_PROBE_PTRACE_BLOCKED 等）。 */
     val romHint: String = "",
-    val recoverable: Boolean = false,
+    /** 可恢复标记（默认取错误码表 —— recoverable=true 才允许「重试」按钮，DC-102）。 */
+    val recoverable: Boolean = AbyssErrorCodes.isRecoverable(code),
     val suggestedAction: String = "",
 ) {
     init {

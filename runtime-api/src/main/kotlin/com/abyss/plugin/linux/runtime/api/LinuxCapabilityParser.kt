@@ -68,7 +68,13 @@ object LinuxCapabilityParser {
     }
 
     fun parseCapabilityId(raw: String): CapabilityId {
-        val id = CapabilityId(raw.trim())
+        val trimmed = raw.trim()
+        // 形态先行校验（CapabilityId 构造期 require），统一以 E_CAPABILITY_MISMATCH 语义抛出
+        val id = runCatching { CapabilityId(trimmed) }.getOrElse {
+            throw IllegalArgumentException(
+                "能力 id 形态非法 → $trimmed（E_CAPABILITY_MISMATCH，应为 ^[a-z0-9-]+-v[0-9]+\$）",
+            )
+        }
         require(id.value == CapabilityId.LINUX_RUNTIME_V1.value) {
             "当前唯一注册能力为 linux-runtime-v1 → ${id.value}（E_CAPABILITY_MISMATCH）"
         }
