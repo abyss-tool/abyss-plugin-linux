@@ -26,11 +26,11 @@ data class AssetIndex(
 }
 
 enum class AssetType(val id: String) {
-    ROOTFS("rootfs"),
-    IMAGE("image"),
-    TOOLCHAIN("toolchain"),
-    ENGINE_NATIVE("engine-native"),
-    TEMPLATE("template");
+    @kotlinx.serialization.SerialName("rootfs") ROOTFS("rootfs"),
+    @kotlinx.serialization.SerialName("image") IMAGE("image"),
+    @kotlinx.serialization.SerialName("toolchain") TOOLCHAIN("toolchain"),
+    @kotlinx.serialization.SerialName("engine-native") ENGINE_NATIVE("engine-native"),
+    @kotlinx.serialization.SerialName("template") TEMPLATE("template");
 
     companion object {
         fun fromId(raw: String): AssetType? = entries.firstOrNull { it.id == raw }
@@ -114,6 +114,11 @@ data class AssetTemplate(
 ) {
     init {
         require(id.isNotBlank()) { "模板 id 不得为空" }
+        // Windows 类模板不分发（N-VM-004 FR-002 / DC-102 §2：仅用户自备）
+        val windowsLike = id.lowercase().let { "windows" in it || it.startsWith("win-") }
+        if (windowsLike) {
+            require(!distributable) { "Windows 类模板必须 distributable=false（仅用户自备，N-VM-004 FR-002）" }
+        }
         if (distributable) {
             require(license.isNotBlank()) { "可分发模板必须声明 license" }
         }
