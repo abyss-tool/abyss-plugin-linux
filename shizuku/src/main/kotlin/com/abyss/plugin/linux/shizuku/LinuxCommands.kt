@@ -26,6 +26,22 @@ object LinuxCommands {
         return token
     }
 
+    /**
+     * 会话内相对路径校验（argv 元素形态 —— 与 ExecCommand.cwd/
+     * workdirRelative 同款纪律）：非空、非绝对、禁穿越（..）、禁
+     * 反斜杠与空白（路径含 `/` 合法，属 argv 元素而非 shell 拼接）。
+     */
+    fun requireSafeRelativePath(path: String): String {
+        require(path.isNotEmpty()) { "空路径" }
+        require(!path.startsWith("/")) { "路径必须为会话内相对形态：$path" }
+        require(!path.contains('\\')) { "路径禁用反斜杠：$path" }
+        require(".." !in path.split('/')) { "路径禁止穿越：$path" }
+        require(path.none { it.isWhitespace() || it in ";|&`\$" }) {
+            "路径含非法字符（就地拒绝，不尝试净化）：$path"
+        }
+        return path
+    }
+
     /** 自由文本单引号转义（`'` → `'\''`）。 */
     fun shellQuote(text: String): String = "'" + text.replace("'", "'\\''") + "'"
 
@@ -39,8 +55,8 @@ object LinuxCommands {
     )
 
     /** rootfs 就绪探测（底座内 ldd 验证 aapt2 动态依赖 —— C-1 门禁）。 */
-    fun toolchainLddCheckArgv(aapt2Path: String): List<String> =
-        listOf("ldd", requireSafeToken(aapt2Path))
+    fun toolchainLddCheckArgv(aapt2RelativePath: String): List<String> =
+        listOf("ldd", requireSafeRelativePath(aapt2RelativePath))
 
     /** rootfs 内自检命令（E2E-01：`echo ok` / `apk --version`）。 */
     fun smokeTestArgv(): List<List<String>> = listOf(

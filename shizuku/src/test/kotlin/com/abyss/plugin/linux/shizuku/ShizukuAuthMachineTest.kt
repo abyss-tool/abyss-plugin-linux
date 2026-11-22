@@ -51,7 +51,26 @@ class LinuxCommandsTest {
     fun `免引用参数白名单`() {
         assertEquals("alpine-rootfs", LinuxCommands.requireSafeToken("alpine-rootfs"))
         assertEquals("aapt2.arm64.v34", LinuxCommands.requireSafeToken("aapt2.arm64.v34"))
-        assertEquals("/path:ok-1.0", LinuxCommands.requireSafeToken("/path:ok-1.0"))
+        assertEquals("path:ok-1.0", LinuxCommands.requireSafeToken("path:ok-1.0"))
+        // 斜杠不属于免引用 token 白名单（路径形态走 requireSafeRelativePath）
+        try {
+            LinuxCommands.requireSafeToken("a/b")
+            fail("斜杠 token 应就地拒绝")
+        } catch (expected: IllegalArgumentException) {
+        }
+    }
+
+    @Test
+    fun `会话内相对路径校验（argv 元素形态）`() {
+        assertEquals("toolchains/aapt2", LinuxCommands.requireSafeRelativePath("toolchains/aapt2"))
+        assertEquals("a/b/c-1.0.0", LinuxCommands.requireSafeRelativePath("a/b/c-1.0.0"))
+        listOf("../escape", "/abs/path", "", "back\\slash", "a b", "a;b", "a|b", "a&b", "a\$b", "a`b`").forEach { bad ->
+            try {
+                LinuxCommands.requireSafeRelativePath(bad)
+                fail("非法相对路径应就地拒绝 → ${bad.replace("\n", "⏎")}")
+            } catch (expected: IllegalArgumentException) {
+            }
+        }
     }
 
     @Test
@@ -87,12 +106,17 @@ class LinuxCommandsTest {
     fun `冒烟与 ldd 模板（E2E-01 与 C-1 门禁）`() {
         assertEquals(listOf(listOf("echo", "ok"), listOf("apk", "--version")), LinuxCommands.smokeTestArgv())
         assertEquals(
-            listOf("ldd", "/toolchains/aapt2"),
-            LinuxCommands.toolchainLddCheckArgv("/toolchains/aapt2"),
+            listOf("ldd", "toolchains/aapt2"),
+            LinuxCommands.toolchainLddCheckArgv("toolchains/aapt2"),
         )
         try {
             LinuxCommands.toolchainLddCheckArgv("bad;path")
             fail("ldd 路径含非法字符必须就地拒绝")
+        } catch (expected: IllegalArgumentException) {
+        }
+        try {
+            LinuxCommands.toolchainLddCheckArgv("../escape")
+            fail("ldd 路径穿越必须就地拒绝")
         } catch (expected: IllegalArgumentException) {
         }
     }
