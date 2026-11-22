@@ -1,0 +1,33 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android / IDE
+local.properties
+.idea/
+*.iml
+.cxx/
+captures/
+.kotlin/
+
+# OS
+.DS_Store
+
+# 构建产物不入库（APK / 资产分卷一律走 GitHub Releases / Actions Artifacts）
+*.apk
+*.aab
+*.vcdiff
+*.tar.gz
+*.qcow2
+outputs/
+assets/*.vol*
+
+# Python 构建产物
+__pycache__/
+*.pyc
+
+# 发布签名材料不入库（jks 经 GitHub Actions secrets 注入）
+keystore/
+*.jks
+*.keystore
