@@ -1,0 +1,70 @@
+{
+  "id": "abyss-plugin-linux",
+  "name": "Linux 运行环境",
+  "version": "0.2.0",
+  "minHost": 2,
+  "minApp": "0.10.0",
+  "category": "tools",
+  "summary": "自包含 Linux 运行环境：PRoot 用户态 + QEMU 完整系统双执行域，统一 RuntimeSession 会话与 Shizuku 统一授权，唯一向生态提供 linux-runtime-v1 能力。",
+  "icon": "🐧",
+  "permissions": [
+    "INTERNET",
+    "FOREGROUND_SERVICE",
+    "WAKE_LOCK"
+  ],
+  "shizuku": {
+    "ownAuth": true,
+    "reason": "PRoot/QEMU 引擎经 Shizuku 的 ADB shell 上下文（uid 2000）拉起，绕过普通应用沙箱对 ptrace 与内存锁的限制；本插件为独立 APK，按 per-app 授权机制需单独授权一次，且是全生态唯一持有方。"
+  },
+  "provides": [
+    {
+      "capability": "linux-runtime-v1",
+      "since": "0.2.0",
+      "stable": true
+    }
+  ],
+  "capabilities": {
+    "linux-runtime-v1": {
+      "hostApi": 2,
+      "domains": [
+        {
+          "id": "PROOT_USERLAND",
+          "kernel": "shared-android",
+          "coldStartMs": 8000,
+          "features": ["EXEC", "PTY", "FILE_IO", "PKG_INSTALL"],
+          "assets": ["rootfs", "toolchain"]
+        },
+        {
+          "id": "QEMU_VM",
+          "kernel": "guest-linux",
+          "coldStartMs": 180000,
+          "features": ["EXEC", "PTY", "FILE_IO", "PKG_INSTALL", "VNC", "SNAPSHOT", "PORT_FORWARD"],
+          "assets": ["image"]
+        }
+      ],
+      "arch": ["arm64"],
+      "limits": {
+        "maxMemoryMb": 2048,
+        "maxExecTimeoutSec": 1800,
+        "maxOutputBytes": 1048576,
+        "maxConcurrentExec": 1,
+        "defaultQuotaGb": 8
+      },
+      "auth": {
+        "shizuku": "ownAuth",
+        "grantTtlSec": 300,
+        "mediator": "PluginBroker"
+      }
+    }
+  },
+  "assetChannel": "https://raw.githubusercontent.com/abyss-tool/abyss-plugin-linux/main/assets/index.json",
+  "entry": "com.abyss.plugin.linux.LinuxRuntimeService",
+  "repo": "abyss-tool/abyss-plugin-linux",
+  "patchChannel": "https://raw.githubusercontent.com/abyss-tool/abyss-plugin-linux/main/patches/index.json",
+  "roadmap": [
+    "v0.2 PRoot 域：rootfs 资产通道 + 会话状态机 + 探测降级链（M1）",
+    "v0.3 跨插件能力绑定：SessionGrant + 受限 ILinuxSession 代理（M1）",
+    "v0.4 QEMU 域：TCG 引擎 + 镜像 + VNC 回环 + 快照（M3）",
+    "v0.5 资产差量：vcdiff 差量更新与配额 LRU 收口（M4）"
+  ]
+}

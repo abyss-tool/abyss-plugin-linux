@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- SEC-100 / DC-100：Linux 插件权限集 —— 不申请 REQUEST_INSTALL_PACKAGES -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <application
+        android:label="Linux 运行环境">
+
+        <!-- LinuxRuntimeService（ARC-100 §4 / LIN-004）：
+             exported 为跨 APK 绑定所必需；onBind 一律校验调用方与
+             SessionGrant —— 无合法凭证直接返回 null（ARC-102 §4 纪律）。
+             动作串与宿主 PluginContract.ACTION_LINUX_RUNTIME 对齐。 -->
+        <service
+            android:name=".LinuxRuntimeService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.abyss.tools.plugin.action.LINUX_RUNTIME" />
+            </intent-filter>
+            <meta-data
+                android:name="com.abyss.tools.plugin.HOST_ENTRY"
+                android:value="com.abyss.plugin.linux.LinuxRuntimeService" />
+        </service>
+    </application>
+</manifest>

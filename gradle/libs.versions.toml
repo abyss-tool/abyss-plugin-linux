@@ -1,0 +1,27 @@
+[versions]
+# 与主仓 Abyss-Tools 工具链矩阵完全对齐（AGP 8.13.2 / Kotlin 2.3.21 /
+# Gradle 8.14 wrapper / JDK 17）：本仓插件与其同源 CI 构建，避免组合漂移。
+kotlin = "2.3.21"
+agp = "8.13.2"
+serialization = "1.9.0"
+coroutines = "1.10.2"
+okhttp = "4.12.0"
+shizuku = "13.1.5"
+junit = "4.13.2"
+
+[libraries]
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+# Shizuku（Maven Central）：uid2000 shell 上下文 —— 仅允许进入 :shizuku 模块
+shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
+shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
