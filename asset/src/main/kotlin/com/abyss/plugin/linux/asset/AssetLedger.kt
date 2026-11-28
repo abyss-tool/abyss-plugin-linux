@@ -29,6 +29,14 @@ data class LedgerEntry(
     val id: String,
     val version: String,
     val state: AssetLedgerState = AssetLedgerState.IDLE,
+    /**
+     * 资产种类（NG-7，深挖第三轮）：LRU 保留策略「至少保留 1 个可用 rootfs」的
+     * 判定依据 —— 旧实现无种类概念，混合资产（rootfs + image/toolchain）下
+     * 「唯一 rootfs」被当作「唯一 READY 条目」误判，可被 LRU 回收。
+     * null = 未标注（旧账本 / 测试），不计入 rootfs 保留（fail-open 仅限
+     * 保留策略，不产生越权）；安装器写入时必须携带。
+     */
+    val type: AssetType? = null,
     val installedAt: String? = null,
     val lastVerifiedAt: String? = null,
     val sha256: String? = null,
@@ -108,12 +116,18 @@ object QuotaPolicy {
             .filter { it.state == AssetLedgerState.READY && it.id !in referencedIds }
             .sortedBy { it.lastReferencedAt } // LRU：最久未用在前
         val audits = mutableListOf<CleanupAudit>()
-        var rootfsKept = ledger.entries.count { it.state == AssetLedgerState.READY }
+        // NG-7：按「种类 = ROOTFS 的 READY 条目」计数 —— 混合资产下
+        // image/toolchain 的存在不再稀释保留判定（旧实现数全部 READY）。
+        var rootfsKept = ledger.entries.count {
+            it.state == AssetLedgerState.READY && it.type == AssetType.ROOTFS
+        }
         for (entry in candidates) {
             if (used < target) break
-            // 至少保留 1 个可用 rootfs（LIN-003 §5 保留策略）
-            if (rootfsKept <= 1 && isLastRootfs(ledger, entry)) continue
-            if (isLastRootfs(ledger, entry)) rootfsKept -= 1
+            // 至少保留 1 个可用 rootfs（LIN-003 §5 保留策略 —— 按种类计数）
+            if (entry.type == AssetType.ROOTFS) {
+                if (rootfsKept <= 1) continue
+                rootfsKept -= 1
+            }
             used -= entry.sizeBytes
             audits += CleanupAudit(
                 assetId = entry.id,
@@ -125,9 +139,6 @@ object QuotaPolicy {
         }
         return audits
     }
-
-    private fun isLastRootfs(ledger: AssetLedger, entry: LedgerEntry): Boolean =
-        ledger.entries.count { it.id != entry.id && it.state == AssetLedgerState.READY } == 0
 }
 
 /**

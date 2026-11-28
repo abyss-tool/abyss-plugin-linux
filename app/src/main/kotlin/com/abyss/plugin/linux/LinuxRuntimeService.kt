@@ -30,9 +30,12 @@ class LinuxRuntimeService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // NG-5（深挖第三轮）：版本免猜 —— PM 查询失败时兑底 "0.0.0"（诚实未知），
+        // 不再硬编码 "0.2.0" 制造第三事实源（APK versionName 与 plugin.json 版本
+        // 由 CI 门禁 validate_plugin.py 钉死一致，这里只负责如实上报）。
         val version = runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
-        }.getOrNull() ?: "0.2.0"
+        }.getOrNull() ?: "0.0.0"
         binder = LinuxRuntimeBinder(version, HostCallerGuard(packageManager))
     }
 

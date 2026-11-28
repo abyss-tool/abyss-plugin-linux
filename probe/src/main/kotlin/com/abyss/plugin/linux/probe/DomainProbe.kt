@@ -36,7 +36,7 @@ object DomainProbe {
             workaround = "Shizuku uid2000 上下文可缓解但不保证 —— ColorOS 16 的「权限监控」也可能拦截 Shizuku 本身（临时切英语系统 → 开发者选项 Disable system optimization → 重启 Shizuku；可能影响 LTPO 刷新率/续航，需权衡）",
         ),
         KnownRom(
-            manufacturerPrefixes = listOf("honhor", "honor"),
+            manufacturerPrefixes = listOf("honor"),
             romName = "荣耀 MagicOS",
             behavior = "内核拒绝（严格 SELinux 策略）",
             workaround = "无已知缓解路径 —— PRoot 域不可用，可评估切 QEMU_VM 完整系统域",
@@ -111,11 +111,17 @@ object DomainProbe {
         else -> decision(Level.NOT_INITIALIZED, "not_run", "NOT_RUN", "未初始化：点击「探测环境」开始")
     }
 
-    /** 解析探测输出 → [ProbeOutcome]（fail-closed：语义不明一律 DENIED）。 */
+    /**
+     * 解析探测输出 → [ProbeOutcome]（fail-closed：语义不明一律 DENIED）。
+     *
+     * NG-6（深挖第三轮）：不再按 manufacturer 前缀先验否决 —— Build.MANUFACTURER
+     * 无版本信息，前缀匹配会把 ColorOS < 15 的 OPPO/OnePlus/Realme 与未受限的
+     * 荣耀机型整套拒掉（规格语义是「ColorOS 15/16」版本级清单，非厂商级）。
+     * 探测输出是唯一判定权威；受限 ROM 清单仅作 romHint / 人话预警
+     * （[restrictedRomSummary]，由 Android 侧版本指纹在 M1 T-015 细化到
+     * `ro.build.version.oplusrom` 等系统属性）。
+     */
     fun parseOutcome(output: String, manufacturer: String): ProbeOutcome {
-        // ① 已知受限 ROM 直接判定（清单权威，先于通用探测）
-        if (restrictedRomOf(manufacturer) != null) return ProbeOutcome.DENIED
-        // ② SELinux Enforcing + 厂商未知 = MagicOS 型拒绝的常见形态
         val enforcing = output.lineOf("getenforce") == "Enforcing"
         val tracerPid = output.lineOf("TracerPid")?.substringAfterLast(':')?.trim()
         return when {
