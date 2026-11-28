@@ -19,6 +19,14 @@
 
 > M1 模块批次（随下次发版滚动；CHANGELOG 先行登记工作进展）。
 
+**M0 阻塞项 G-1 收口（ARC-104 §6，2026-11-28）：exported 服务的调用方签名硬门禁**
+
+- `:runtime-api` 新增 `HostCallerTrust`（纯 JVM）：调用方可信 = uid 包集合**恰为**宿主包 `com.abyss.tools` ∧ 签名证书 SHA-256 命中宿主发布者指纹（与主仓 `PublisherSignatures.PINNED_SHA256` 同一常量，冒号 / 大小写形态归一化）；共享 uid 多包、第三方包、空签名、非法形态一律不可信（fail-closed，不读 Intent extras、不接受自报包名）
+- `:app` 新增 `HostCallerGuard`：`Binder.getCallingUid()` → `getPackagesForUid` → `SigningInfo`（API 28+，`GET_SIGNATURES` 双标志兜底 26/27）→ 摘要比对；`LinuxRuntimeBinder` 的 `ping` / `getRuntimeInfo` / `openSession` 每个入口先 `requireTrustedCaller()`，第三方调用抛 `E_DIRECT_BIND_DENIED`（人话提示 + AILD 传播通道与 openSession 一致）；guard 未接线时 fail-closed 拒绝
+- 校验点在 AIDL 方法体而非 `onBind`：onBind 由 system_server 转发，`Binder.getCallingUid()` 取到的是系统 uid；onBind 保留 action 校验
+- 不采用 Manifest `android:permission` 指向宿主声明的 signature 级权限作为主门禁（自定义权限名无归属保证，存在 permission squatting 风险）；进程内签名校验不依赖安装顺序，后续可与该层叠加
+- 单测：`HostCallerTrustTest` 7 例（宿主指纹命中 / 冒号形态等价 / 共享 uid / 第三方直连 / 指纹不符 / 空与非法形态 / 证书摘要互逆）
+
 **M1 核心模块落地（PLAN-100 T-012~T-018 的纯 JVM 面）。**
 
 - `:session`：RuntimeSession 状态机（10 状态 + 迁移表 + 状态×操作门禁，ARC-101 §2）、工作区 canonical 断言器（穿越/绝对路径/软链逃逸拒收）、引用计数引擎（60s 延迟回收 + 复用取消回收）
