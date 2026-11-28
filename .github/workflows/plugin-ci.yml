@@ -26,6 +26,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ── 同类缺陷防御（B-01，与插件中心 hub-ci 同款收敛）：门禁脚本先过
+      #    语法编译再跑业务校验 —— tools/*.py 的 NameError 级缺陷不再能
+      #    以「业务数据恰好合法」的形态溜进 main。
+      - name: Python syntax pre-check (py_compile all tools)
+        run: python3 -m py_compile tools/*.py
+
       - name: Validate plugin manifest & patch channel
         run: |
           chmod +x tools/validate_plugin.py
@@ -97,6 +103,14 @@ jobs:
 
       - name: Unit tests (纯 JVM 契约单测)
         run: ./gradlew test --stacktrace
+
+      - name: Upload test report (失败可读)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-test-report
+          path: '**/build/reports/tests/'
+          if-no-files-found: ignore
 
       - name: Verify release APK signature (when signed)
         if: env.ABYSS_SIGNING_AVAILABLE == '1'
