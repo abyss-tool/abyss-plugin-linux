@@ -13,7 +13,9 @@
 
 同时维护仓库侧的版本事实源（否则 plugin-ci 门禁会拒绝）：
   - plugin.json  version → to
-  - CHANGELOG.md 追加 `## v<to>` 一版一条
+  - app/build.gradle.kts versionName → to（NG-8：三源钉一，validate_plugin.py 校验）
+  - CHANGELOG.md 追加 `## v<to>` 一版一条（NG-9：目标条目已存在即 die ——
+    工作树预填条目会让追加静默跳过，发布 notes 分叉且门禁绿灯）
 """
 from __future__ import annotations
 
@@ -110,12 +112,30 @@ def main() -> None:
 
     # ── 仓库侧版本事实源同步（plugin-ci 门禁依赖）────────────────────────
     manifest_path.write_text(payload_manifest, encoding="utf-8")
+
+    # NG-9：目标版本条目已存在（工作树预填 / 重复打包）即 die —— 静默跳过
+    # 会让仓库 CHANGELOG 永远停留在旧内容，而门禁的存在性检查被旧条目命中。
     changelog = Path("CHANGELOG.md")
-    if changelog.exists():
-        text = changelog.read_text(encoding="utf-8").rstrip("\n")
-        entry = f"\n\n## v{to}\n\n" + "\n".join(f"- {n}" for n in args.notes) + "\n"
-        if f"## v{to}" not in text:
-            changelog.write_text(text + entry, encoding="utf-8")
+    if not changelog.exists():
+        die("缺 CHANGELOG.md（插件仓必须携带一版一条的变更日志）")
+    text = changelog.read_text(encoding="utf-8").rstrip("\n")
+    if f"## v{to}" in text:
+        die(
+            f"CHANGELOG.md 已存在 ## v{to} 条目 —— 预填 / 重复打包不允许覆盖，"
+            f"请先移除预填条目或换目标版本"
+        )
+    entry = f"\n\n## v{to}\n\n" + "\n".join(f"- {n}" for n in args.notes) + "\n"
+    changelog.write_text(text + entry, encoding="utf-8")
+
+    # NG-8：APK versionName 同步升版（第三事实源钉进 make_patch 的事实源同步）
+    gradle_path = Path("app/build.gradle.kts")
+    if gradle_path.exists():
+        gradle = gradle_path.read_text(encoding="utf-8")
+        bumped = re.sub(r'versionName = "[^"]+"', f'versionName = "{to}"', gradle, count=1)
+        if bumped != gradle:
+            gradle_path.write_text(bumped, encoding="utf-8")
+        else:
+            die("app/build.gradle.kts 未能写入 versionName（模板漂移，请人工核对）")
 
     print(f"[make-patch] ✓ {pid} {frm} → {to}")
     print(f"[make-patch] 包：{zip_path}（{size} bytes）")

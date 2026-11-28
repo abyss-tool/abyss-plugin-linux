@@ -15,9 +15,9 @@
 
 对齐规格：`ADR-100` / `SRS-102` / `ARC-100` / `ARC-101` / `DC-100` / `DC-101` / `DC-102` / `ENG-100` / `LIN-003`（契约部分）。
 
-## v0.3.0（2026-11-22 · 未发布——工作树预填）
+## v0.3.0（2026-11-28）
 
-> M1 模块批次（随下次发版滚动；CHANGELOG 先行登记工作进展）。
+> 深挖第三轮加固（G-1 门禁修正 + 工具链门禁三源钉一 + M1 纯 JVM 模块批次）。
 
 **M0 阻塞项 G-1 收口（ARC-104 §6，2026-11-28）：exported 服务的调用方签名硬门禁**
 
@@ -26,6 +26,18 @@
 - 校验点在 AIDL 方法体而非 `onBind`：onBind 由 system_server 转发，`Binder.getCallingUid()` 取到的是系统 uid；onBind 保留 action 校验
 - 不采用 Manifest `android:permission` 指向宿主声明的 signature 级权限作为主门禁（自定义权限名无归属保证，存在 permission squatting 风险）；进程内签名校验不依赖安装顺序，后续可与该层叠加
 - 单测：`HostCallerTrustTest` 7 例（宿主指纹命中 / 冒号形态等价 / 共享 uid / 第三方直连 / 指纹不符 / 空与非法形态 / 证书摘要互逆）
+
+**深挖第三轮 G-1 修正（NG-1~NG-9，2026-11-28）**
+
+- `NG-1`：`HostCallerGuard` 签名读取按 `Build.VERSION.SDK_INT >= 28` 分支 —— 旧实现直读 `PackageInfo.signingInfo`（API 28+ 字段），在 minSdk 26/27 的 Android 8.x 上 `getfield` 抛 `NoSuchFieldError` 被 runCatching 吞成空签名集，**合法宿主被全量拒绝**（fail-closed 方向对但把真宿主关在门外）；现 26/27 走 `signatures` 旧字段
+- `NG-2`：签名集**只认当前签名者**（apkContentsSigners / signatures）—— 不再以 `hasMultipleSigners()` 为条件并入 `signingCertificateHistory`（语义错位：正确条件是 hasPastSigningCertificates，且多签名者场景 history 恒为 null）；历史 / 轮换证书不参与可信判定，宿主轮换时双方 pin 同步更新
+- `NG-3`：Guard 改构造注入（uid→包集合 / 包→摘要集两个查询函数）—— 判定链（uid 反查 → 摘要汇集 → isTrustedHost）可纯 JVM 全量断言；新增 `HostCallerGuardTest` 7 例（第三方 / 共享 uid / 指纹不符 / 多签名者任一命中 / 查询异常 / 未知 uid / 摘要形态锚）
+- `NG-4`：异常 message 携 `[E_XXX]` 码前缀（`Diagnostic.machineHint`）—— 跨进程调用方按码路由而非字符串匹配人话；`E_DIRECT_BIND_DENIED` 改抛 `SecurityException`（语义对齐），`E_RUNTIME_UNAVAILABLE` 同步前缀化
+- `NG-5`：`LinuxRuntimeService` 版本兜底 `"0.2.0"` 硬编码改诚实 `"0.0.0"` —— 三源漂移面收敛为 CI 钉一
+- `NG-6`：`DomainProbe.parseOutcome` 移除 manufacturer 前缀先验否决 —— 旧实现把 ColorOS < 15 的 OPPO/OnePlus/Realme 与未受限荣耀机型整套拒掉（规格语义是「ColorOS 15/16」版本级清单）；探测输出为唯一判定权威，清单降级为 romHint 预警（版本级细化留 M1 T-015 系统属性指纹）；顺手修正 `honhor` 拼写死前缀
+- `NG-7`：`LedgerEntry` 增 `type` 字段、`QuotaPolicy` 的「至少保留 1 个可用 rootfs」按种类计数 —— 旧实现数全部 READY 条目，混合资产（rootfs + image/toolchain）下唯一 rootfs 可被 LRU 误回收（数 GB 重下）；新增混合资产回归锚
+- `NG-8`：版本三源钉一 —— `make_patch.py` 同步升版 `app/build.gradle.kts versionName`、`validate_plugin.py` 新增 versionName == plugin.json.version 断言（旧实现从不校验 Gradle 侧，APK 与插件中心读到不同版本）
+- `NG-9`：`make_patch.py` 对已存在的 `## v<to>` 条目直接 die —— 旧实现静默跳过写入，工作树预填条目让发布 notes 分叉且门禁绿灯
 
 **M1 核心模块落地（PLAN-100 T-012~T-018 的纯 JVM 面）。**
 

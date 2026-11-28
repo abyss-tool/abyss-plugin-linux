@@ -1,7 +1,7 @@
 {
   "id": "abyss-plugin-linux",
   "name": "Linux 运行环境",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "minHost": 2,
   "minApp": "0.10.0",
   "category": "tools",
@@ -31,18 +31,38 @@
           "id": "PROOT_USERLAND",
           "kernel": "shared-android",
           "coldStartMs": 8000,
-          "features": ["EXEC", "PTY", "FILE_IO", "PKG_INSTALL"],
-          "assets": ["rootfs", "toolchain"]
+          "features": [
+            "EXEC",
+            "PTY",
+            "FILE_IO",
+            "PKG_INSTALL"
+          ],
+          "assets": [
+            "rootfs",
+            "toolchain"
+          ]
         },
         {
           "id": "QEMU_VM",
           "kernel": "guest-linux",
           "coldStartMs": 180000,
-          "features": ["EXEC", "PTY", "FILE_IO", "PKG_INSTALL", "VNC", "SNAPSHOT", "PORT_FORWARD"],
-          "assets": ["image"]
+          "features": [
+            "EXEC",
+            "PTY",
+            "FILE_IO",
+            "PKG_INSTALL",
+            "VNC",
+            "SNAPSHOT",
+            "PORT_FORWARD"
+          ],
+          "assets": [
+            "image"
+          ]
         }
       ],
-      "arch": ["arm64"],
+      "arch": [
+        "arm64"
+      ],
       "limits": {
         "maxMemoryMb": 2048,
         "maxExecTimeoutSec": 1800,

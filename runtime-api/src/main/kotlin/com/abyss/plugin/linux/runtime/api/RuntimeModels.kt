@@ -37,6 +37,16 @@ data class Diagnostic(
     val humanHint: String
         get() = hint.ifBlank { AbyssErrorCodes.hintFor(code) }
 
+    /**
+     * 机器可路由的异常文案（NG-4，深挖第三轮）：`[E_XXX] 人话提示`。
+     * AIDL 异常通道（IllegalStateException / SecurityException 的 message）
+     * 只能携字符串 —— M1 的 DiagnosticData 返回值包装落地前，跨进程调用方
+     * 按码前缀路由（而非字符串匹配人话），宿主 PluginBroker 的审计 / 降级
+     * 逻辑得以拿回错误码。
+     */
+    val machineHint: String
+        get() = "[$code] $humanHint"
+
     companion object {
         /** 已知 ptrace 受限 ROM 清单（LIN-001 C-8 / LIN-004 §5.4）。 */
         const val ROM_HINT_PTRACE: String =

@@ -18,8 +18,8 @@ android {
         // execve。本项目经 GitHub Releases 侧载分发，不受 Play 政策约束
         //（详见主仓 docs/ANDROID_COMPAT.md / N-CMP-001 / SEC-007）。
         targetSdk = 28
-        versionCode = 1
-        versionName = "0.2.0"
+        versionCode = 2
+        versionName = "0.3.0"
     }
 
     // ── AIDL 契约编译：单一事实源在 :runtime-api/src/main/aidl ──────────

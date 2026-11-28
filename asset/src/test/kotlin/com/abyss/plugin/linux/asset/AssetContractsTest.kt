@@ -132,8 +132,13 @@ class AssetContractsTest {
 /** 配额与 LRU 清理（LIN-003 §5：8GB / 90% 水位 / 保留策略 / 审计）。 */
 class QuotaPolicyTest {
 
-    private fun entry(id: String, sizeBytes: Long, lastRef: Long = 0L) = LedgerEntry(
-        id = id, version = "1.0", state = AssetLedgerState.READY,
+    private fun entry(
+        id: String,
+        sizeBytes: Long,
+        lastRef: Long = 0L,
+        type: AssetType? = null,
+    ) = LedgerEntry(
+        id = id, version = "1.0", state = AssetLedgerState.READY, type = type,
         sha256 = "a".repeat(64), sizeBytes = sizeBytes, lastReferencedAt = lastRef,
     )
 
@@ -152,8 +157,8 @@ class QuotaPolicyTest {
     fun `引用中的资产禁止清理（保留策略）`() {
         val ledger = AssetLedger(
             entries = listOf(
-                entry("rootfs-a", 6L * 1024 * 1024 * 1024, lastRef = 1),
-                entry("rootfs-b", 3L * 1024 * 1024 * 1024, lastRef = 2),
+                entry("rootfs-a", 6L * 1024 * 1024 * 1024, lastRef = 1, type = AssetType.ROOTFS),
+                entry("rootfs-b", 3L * 1024 * 1024 * 1024, lastRef = 2, type = AssetType.ROOTFS),
             ),
         )
         // rootfs-a 被会话引用 → 只能清 rootfs-b（LRU 最久未用）
@@ -164,17 +169,37 @@ class QuotaPolicyTest {
 
     @Test
     fun `至少保留 1 个可用 rootfs`() {
-        val ledger = AssetLedger(entries = listOf(entry("only-rootfs", 9L * 1024 * 1024 * 1024, lastRef = 1)))
+        val ledger = AssetLedger(
+            entries = listOf(entry("only-rootfs", 9L * 1024 * 1024 * 1024, lastRef = 1, type = AssetType.ROOTFS)),
+        )
         val plan = QuotaPolicy.cleanupPlan(ledger, referencedIds = emptySet(), nowEpochMs = 99)
         assertTrue("唯一的 rootfs 不得被清理", plan.isEmpty())
+    }
+
+    @Test
+    fun `混合资产下唯一 rootfs 不被误回收（NG-7 回归锚）`() {
+        // 旧实现数「全部 READY 条目」当 rootfs：image/toolchain 在场时唯一
+        // rootfs 不再是「最后一个 READY」，会进清理计划 → 数 GB 重下。
+        val gb = 1024L * 1024 * 1024
+        val ledger = AssetLedger(
+            entries = listOf(
+                entry("rootfs-only", 2 * gb, lastRef = 1, type = AssetType.ROOTFS),
+                entry("image-a", 3 * gb, lastRef = 2, type = AssetType.IMAGE),
+                entry("toolchain-a", 3 * gb, lastRef = 3, type = AssetType.TOOLCHAIN),
+            ),
+        )
+        val plan = QuotaPolicy.cleanupPlan(ledger, referencedIds = emptySet(), nowEpochMs = 99)
+        assertTrue("混合资产下唯一 rootfs 仍受保留策略保护", plan.none { it.assetId == "rootfs-only" })
+        // 非同类资产照常按 LRU 回收到水位
+        assertTrue(plan.any { it.assetId == "image-a" })
     }
 
     @Test
     fun `清理写审计（id、版本、释放量、原因）`() {
         val ledger = AssetLedger(
             entries = listOf(
-                entry("rootfs-old", 5L * 1024 * 1024 * 1024, lastRef = 1),
-                entry("rootfs-new", 5L * 1024 * 1024 * 1024, lastRef = 99_999),
+                entry("rootfs-old", 5L * 1024 * 1024 * 1024, lastRef = 1, type = AssetType.ROOTFS),
+                entry("rootfs-new", 5L * 1024 * 1024 * 1024, lastRef = 99_999, type = AssetType.ROOTFS),
             ),
         )
         val plan = QuotaPolicy.cleanupPlan(ledger, referencedIds = emptySet(), nowEpochMs = 100)

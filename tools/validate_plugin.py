@@ -174,6 +174,25 @@ changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
 if f"## v{manifest.get('version')}" not in changelog:
     fail(f"CHANGELOG.md 缺少当前版本条目 ## v{manifest.get('version')}")
 
+# ── NG-8（深挖第三轮）：APK versionName 与 plugin.json 三源钉一 ──────────
+# 旧实现从不校验 Gradle 侧版本 —— patch-release 只 bump plugin.json 时
+# APK versionName 静默漂移，宿主 getRuntimeInfo() 与插件中心 / 依赖解析
+# 读到两个不同版本（E_DEP_VERSION 判定分叉）。make_patch.py 已同步升版，
+# 此门禁保证漂移不可能无声发生。
+_gradle = Path("app/build.gradle.kts")
+if not _gradle.exists():
+    fail("app/build.gradle.kts 缺失（APK 模块是插件本体，不可缺席）")
+else:
+    _m = re.search(r'versionName\s*=\s*"([^"]+)"', _gradle.read_text(encoding="utf-8"))
+    if _m is None:
+        fail("app/build.gradle.kts 未声明 versionName（模板漂移，请人工核对）")
+    elif _m.group(1) != manifest.get("version"):
+        fail(
+            f"版本三源不一致：app/build.gradle.kts versionName({_m.group(1)}) "
+            f"≠ plugin.json.version({manifest.get('version')}) —— APK 与插件中心"
+            f"将读到不同版本（运行时版本判定分叉）"
+        )
+
 channel = json.loads(Path("patches/index.json").read_text(encoding="utf-8"))
 if channel.get("schema") != "abyss-plugin-patches-v1":
     fail("patches/index.json schema 应为 abyss-plugin-patches-v1")

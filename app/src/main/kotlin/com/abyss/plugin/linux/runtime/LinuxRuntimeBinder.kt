@@ -37,7 +37,7 @@ class LinuxRuntimeBinder(
             Diagnostic.of(
                 code = "E_DIRECT_BIND_DENIED",
                 action = "服务未接线调用方校验（fail-closed）—— 拒绝本次调用",
-            ).humanHint,
+            ).machineHint,
         )
         guard.requireTrustedCaller()
     }
@@ -55,12 +55,14 @@ class LinuxRuntimeBinder(
         // M0 fail-closed：宁可「不可用」，不可「假装可用」（ARC-101 §2 纪律③）。
         // M1（T-012/T-013）：grant 五元组校验 + 资产 READY + 探测通过后
         // 经 SessionManager 返回 ILinuxSession。
+        // NG-4：异常 message 携 [E_XXX] 码前缀 —— 跨进程调用方按码路由，
+        // 不再字符串匹配人话（M1 DiagnosticData 返回值包装落地前的过渡）。
         throw IllegalStateException(
             Diagnostic.of(
                 code = "E_RUNTIME_UNAVAILABLE",
                 domain = spec?.preferredDomain?.let { RuntimeDomain.fromId(it) },
                 action = "运行环境尚未就绪（M0 契约骨架期），请等待 Linux 插件首个功能版本。",
-            ).humanHint,
+            ).machineHint,
         )
     }
 

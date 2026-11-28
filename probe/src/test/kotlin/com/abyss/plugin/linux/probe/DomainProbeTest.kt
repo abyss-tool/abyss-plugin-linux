@@ -72,11 +72,22 @@ class DomainProbeTest {
     }
 
     @Test
+    fun `探测输出解析 - 已知清单厂商以输出为准（NG-6 前缀先验否决已移除）`() {
+        // ColorOS < 15 的 OnePlus / 未受限 Realme：探测输出干净 → OK
+        // （旧实现按 manufacturer 前缀整套 DENIED，把可用设备误杀）
+        val clean = "--- getenforce\nPermissive\n--- TracerPid:\n0"
+        assertEquals(DomainProbe.ProbeOutcome.OK, DomainProbe.parseOutcome(clean, "OnePlus"))
+        assertEquals(DomainProbe.ProbeOutcome.OK, DomainProbe.parseOutcome(clean, "Realme"))
+        // 真正受限设备由探测输出如实上报（TracerPid 异常 / 空 / 缺失）
+        assertEquals(DomainProbe.ProbeOutcome.DENIED, DomainProbe.parseOutcome("--- TracerPid:\n1234", "OnePlus"))
+        // 清单仍作 romHint / 预警用途（厂商匹配不变）
+        assertEquals("ColorOS 15/16", DomainProbe.restrictedRomOf("OnePlus")!!.romName)
+    }
+
+    @Test
     fun `探测输出解析 fail-closed`() {
         // 空输出 → DENIED
         assertEquals(DomainProbe.ProbeOutcome.DENIED, DomainProbe.parseOutcome("", "Google"))
-        // 已知受限 ROM → DENIED（清单权威，先于通用探测）
-        assertEquals(DomainProbe.ProbeOutcome.DENIED, DomainProbe.parseOutcome("whatever", "Realme"))
         // TracerPid 非零（已有 tracer = 异常环境）
         assertEquals(
             DomainProbe.ProbeOutcome.DENIED,
