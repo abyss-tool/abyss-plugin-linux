@@ -76,7 +76,7 @@ class HostCallerGuardTest {
     }
 
     @Test
-    fun `uid 反查 - 空签名集 / 查询抛异常 / 未知 uid - 一律不可信（不猜）`() {
+    fun `uid 反查 - 空签名集、查询抛异常、未知 uid 一律不可信（不猜）`() {
         val emptyDigests = guard(
             packages = mapOf(10_005 to listOf(HostCallerTrust.HOST_PACKAGE)),
             digests = emptyMap(),
