@@ -23,13 +23,15 @@ import com.abyss.plugin.linux.runtime.api.HostCallerTrust
  *  - **只认当前签名者**（apkContentsSigners / signatures）：签名历史
  *    （signingCertificateHistory / 轮换 lineage）不参与可信判定 —— pin 必须
  *    命中当前发布者证书；宿主未来轮换签名时主仓 `PublisherSignatures` 与本仓
- *    `HostCallerTrust.HOST_PUBLISHER_SHA256` 同步换 pin。多签名者场景下
+ *    [HostCallerTrust.HOST_PUBLISHER_SHA256] 同步换 pin。多签名者场景下
  *    AOSP 的 history 本就为 null，旧代码把 `hasMultipleSigners()` 当读取条件
  *    属语义错位（正确条件是 hasPastSigningCertificates，且本策略不采信历史）。
  *
  * 构造注入（NG-3）：主构造收「uid→包集合 / 包→签名摘要集」两个查询函数
  * （纯 JVM 单测注入桩 —— 摘要已算好，判定链全部真实执行）；Android 侧经
- * [PackageManager] 便捷构造接线（摘要在 [currentSignerBytes] 侧换算）。
+ * [PackageManager] 便捷构造接线（查询封装在文件顶层 [lookupPackagesForUid] /
+ * [lookupSignerDigests] —— 构造委托表达式里 `runCatching` 的隐式接收者是
+ * 尚未初始化的 `this`，不可用，故不内联在委托参数里）。
  */
 class HostCallerGuard(
     private val packagesForUid: (Int) -> List<String>?,
@@ -38,12 +40,8 @@ class HostCallerGuard(
 
     /** Android 接线（[LinuxRuntimeService] / 生产路径使用）。 */
     constructor(packageManager: PackageManager) : this(
-        packagesForUid = { uid ->
-            runCatching { packageManager.getPackagesForUid(uid)?.toList() }.getOrNull()
-        },
-        signerDigestsOf = { pkg ->
-            currentSignerBytes(packageManager, pkg).map { HostCallerTrust.sha256Hex(it) }
-        },
+        packagesForUid = { uid -> lookupPackagesForUid(packageManager, uid) },
+        signerDigestsOf = { pkg -> lookupSignerDigests(packageManager, pkg) },
     )
 
     /** 当前 AIDL 调用方可信：uid → 包集合恰为宿主 + 签名命中发布者指纹。 */
@@ -68,25 +66,31 @@ class HostCallerGuard(
             )
         }
     }
-
-    companion object {
-        /**
-         * 当前签名者字节集（NG-1/NG-2）：API ≥ 28 优先 `SigningInfo.apkContentsSigners`
-         * （为空回退旧字段）；API 26/27 只有 `signatures` 旧字段 —— signingInfo
-         * 字段访问必须留在 SDK_INT 分支内（26/27 上不存在，直接 getfield 抛
-         * NoSuchFieldError）。
-         */
-        @Suppress("DEPRECATION") // GET_SIGNATURES 全版本可用；signingInfo 字段 API 28+
-        fun currentSignerBytes(packageManager: PackageManager, pkg: String): List<ByteArray> =
-            runCatching {
-                val info = packageManager.getPackageInfo(
-                    pkg,
-                    // 双标志并取：新版本读 SigningInfo，API 26/27 只有 signatures 字段可用
-                    PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES,
-                )
-                val current: List<ByteArray>? =
-                    if (Build.VERSION.SDK_INT >= 28) info.signingInfo?.apkContentsSigners?.map { it.toByteArray() } else null
-                if (!current.isNullOrEmpty()) current else info.signatures?.map { it.toByteArray() }.orEmpty()
-            }.getOrDefault(emptyList())
-    }
 }
+
+/** uid → 包集合查询（探测失败 = null → 不可信，fail-closed）。 */
+private fun lookupPackagesForUid(packageManager: PackageManager, uid: Int): List<String>? =
+    runCatching { packageManager.getPackagesForUid(uid)?.toList() }.getOrNull()
+
+/** 包 → 当前签名者摘要集查询（[HostCallerGuard] 的 Android 接线）。 */
+private fun lookupSignerDigests(packageManager: PackageManager, pkg: String): List<String> =
+    currentSignerBytes(packageManager, pkg).map { HostCallerTrust.sha256Hex(it) }
+
+/**
+ * 当前签名者字节集（NG-1/NG-2）：API ≥ 28 优先 `SigningInfo.apkContentsSigners`
+ * （为空回退旧字段）；API 26/27 只有 `signatures` 旧字段 —— signingInfo
+ * 字段访问必须留在 SDK_INT 分支内（26/27 上不存在，直接 getfield 抛
+ * NoSuchFieldError）。
+ */
+@Suppress("DEPRECATION") // GET_SIGNATURES 全版本可用；signingInfo 字段 API 28+
+private fun currentSignerBytes(packageManager: PackageManager, pkg: String): List<ByteArray> =
+    runCatching {
+        val info = packageManager.getPackageInfo(
+            pkg,
+            // 双标志并取：新版本读 SigningInfo，API 26/27 只有 signatures 字段可用
+            PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES,
+        )
+        val current: List<ByteArray>? =
+            if (Build.VERSION.SDK_INT >= 28) info.signingInfo?.apkContentsSigners?.map { it.toByteArray() } else null
+        if (!current.isNullOrEmpty()) current else info.signatures?.map { it.toByteArray() }.orEmpty()
+    }.getOrDefault(emptyList())
