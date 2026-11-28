@@ -50,8 +50,11 @@ class HostCallerGuard(
 
     /** uid → 签名反查（可单测注入 uid；探测失败一律不可信，绝不猜）。 */
     fun callerTrusted(uid: Int): Boolean {
-        val packages = packagesForUid(uid) ?: return false
-        val digests = packages.flatMap { signerDigestsOf(it) }
+        // 双层 fail-closed：查询函数抛任何异常（提供端死亡 / RemoteException /
+        // PackageManager 崩溃）一律判不可信 —— 绝不让异常穿透 Binder 线程
+        //（Android 接线侧 lookupXxx 自带 runCatching，这里是第二道闸）。
+        val packages = runCatching { packagesForUid(uid) }.getOrNull() ?: return false
+        val digests = runCatching { packages.flatMap { signerDigestsOf(it) } }.getOrDefault(emptyList())
         return HostCallerTrust.isTrustedHost(packages, digests)
     }
 
