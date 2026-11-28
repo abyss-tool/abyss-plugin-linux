@@ -122,7 +122,10 @@ jobs:
             exit 0
           fi
           FINGERPRINT=$("$APKSIGNER" verify --print-certs "$APK" | grep -oP 'SHA-256 digest:\s*\K[0-9a-f]+' | head -1 | tr 'a-f' 'A-F')
-          EXPECTED=$(echo "76:03:78:21:44:88:D6:20:79:78:BA:1E:37:E6:DC:82:AB:C2:DE:72:C9:F6:C6:7D:9B:44:95:15:8A:99:B7:69" | tr -d ':')
+          # N-APP-001 FR-004:插件独立 keystore —— 钉扎本仓 ABYSS_KEYSTORE_*
+          # (PKCS12,2026-11-28 T3-f 配置)自身指纹,非主仓发布者指纹;
+          # 与 Plugin Release 流水线 apksigner 门禁为同一签名身份。
+          EXPECTED=$(echo "D0:C7:38:F4:C9:46:6B:D1:20:F7:B1:9D:0F:D1:C6:EB:7D:BD:D8:68:D9:73:69:17:54:E9:54:17:43:5B:7D:CA" | tr -d ':')
           echo "实际指纹: $FINGERPRINT"
           if [ "$FINGERPRINT" != "$EXPECTED" ]; then
             echo "::error::release APK 签名指纹与发布者常量不符 —— CI 兜底门禁失败（SEC-001 L2）"
