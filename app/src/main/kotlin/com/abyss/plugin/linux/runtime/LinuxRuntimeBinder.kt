@@ -18,18 +18,40 @@ import com.abyss.plugin.linux.runtime.api.ShizukuAuthState
  *  - `openSession()` 一律抛 `E_RUNTIME_UNAVAILABLE` —— 资产管线、
  *    SessionGrant 校验与会话状态机未接入前 fail-closed；
  *  - 调用方四重校验（包名白名单 / 签名指纹 / depends 匹配 / minHost）
- *    由宿主 PluginBroker 侧把门（ARC-102 FR-001）；本进程侧的 grant
- *    五元组校验随 M1 :session 落地。
+ *    由宿主 PluginBroker 侧把门（ARC-102 FR-001）。
+ *
+ * **G-1 服务端硬门禁（ARC-104 §6，v0.3 预填）**：exported=true 意味着任意 App
+ * 都能 bindService —— 每个入口先过 [HostCallerGuard.requireTrustedCaller]：
+ * `Binder.getCallingUid()` 反查包集合（必须恰为宿主包）与签名证书 SHA-256
+ * （必须命中宿主发布者指纹），否则 `E_DIRECT_BIND_DENIED`。M1 的 grant
+ * 五元组校验叠加在此之后。
  */
-class LinuxRuntimeBinder(private val pluginVersion: String) : ILinuxRuntime.Stub() {
+class LinuxRuntimeBinder(
+    private val pluginVersion: String,
+    private val callerGuard: HostCallerGuard? = null,
+) : ILinuxRuntime.Stub() {
 
-    override fun getRuntimeInfo(): RuntimeInfoData =
-        runtimeSnapshot(pluginVersion).toData()
+    /** 入口护栏：guard 未接线（测试 / 旧调用）时 fail-closed 拒绝。 */
+    private fun requireCaller() {
+        val guard = callerGuard ?: throw IllegalStateException(
+            Diagnostic.of(
+                code = "E_DIRECT_BIND_DENIED",
+                action = "服务未接线调用方校验（fail-closed）—— 拒绝本次调用",
+            ).humanHint,
+        )
+        guard.requireTrustedCaller()
+    }
+
+    override fun getRuntimeInfo(): RuntimeInfoData {
+        requireCaller()
+        return runtimeSnapshot(pluginVersion).toData()
+    }
 
     override fun openSession(
         spec: SessionSpecData?,
         grant: SessionGrantData?,
     ): ILinuxSession? {
+        requireCaller()
         // M0 fail-closed：宁可「不可用」，不可「假装可用」（ARC-101 §2 纪律③）。
         // M1（T-012/T-013）：grant 五元组校验 + 资产 READY + 探测通过后
         // 经 SessionManager 返回 ILinuxSession。
@@ -42,7 +64,10 @@ class LinuxRuntimeBinder(private val pluginVersion: String) : ILinuxRuntime.Stub
         )
     }
 
-    override fun ping(): Int = PONG
+    override fun ping(): Int {
+        requireCaller()
+        return PONG
+    }
 
     companion object {
         const val PONG = 0x4C58_3032 // "LX02" —— HOST_API v2
