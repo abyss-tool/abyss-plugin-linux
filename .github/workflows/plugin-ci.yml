@@ -146,3 +146,28 @@ jobs:
           name: abyss-plugin-linux-release-apk
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+  # ── PR 门禁:标题纪律 + diff 红线扫描(与主仓 pr-guard 同构)──────────
+  # 只扫 PR 新增行,存量代码零影响。规则:R1 死点击族(历史复发 4+ 次)/
+  # R2 渠道 URL 白名单(AGENTS.md 模块纪律 4)/ R3 SDK 整组红线
+  # (targetSdk=28 ADR-003 / minSdk=26 / compileSdk=36,勿单独升降)。
+  # 脚本 = tools/pr_guard.py(四仓同构副本,validate 任务的 py_compile
+  # 预检顺带覆盖其语法);本地同款可跑:
+  #   git diff --unified=0 main...HEAD | python3 tools/pr_guard.py --diff
+  pr-guard:
+    name: PR Guard (title + diff red-lines)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout (full history for base diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: PR title + diff red-lines scan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 tools/pr_guard.py --title "$PR_TITLE"
