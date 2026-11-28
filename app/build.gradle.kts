@@ -53,6 +53,8 @@ android {
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
+                // keystore 为 PKCS12(python cryptography 产,30 年自签)
+                storeType = "PKCS12"
                 // minSdk 26：v2/v3 全覆盖，v1 关闭（与主仓同款决策，评审 #14）
                 enableV1Signing = false
                 enableV2Signing = true
